@@ -24,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.minecraft.world.level.NaturalSpawner.getRoughBiome;
@@ -44,6 +46,14 @@ public class EntitiesCounterUtil {
     private static final Map<ServerLevel, Integer> cacheVersion = new ConcurrentHashMap<>();
 
     private static int lastUsedId = 0;
+
+    // Lophine - perf: dedicated single-thread executor to avoid competing with ForkJoinPool common pool
+    private static final ExecutorService COUNTER_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "Lophine-EntitiesCounter");
+        t.setDaemon(true);
+        t.setPriority(Thread.NORM_PRIORITY - 1);
+        return t;
+    });
 
     private static final int CLEANUP_INTERVAL = 200; // each 200 ids used
 
@@ -167,7 +177,7 @@ public class EntitiesCounterUtil {
             }
         };
         if (GlobalEntitiesCounter.async) {
-            tasks.put(level, CompletableFuture.runAsync(task).exceptionally(ex -> {
+            tasks.put(level, CompletableFuture.runAsync(task, COUNTER_EXECUTOR).exceptionally(ex -> {
                 LogUtils.getClassLogger().error("Failed to run task", ex);
                 return null;
             }));

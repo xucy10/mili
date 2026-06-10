@@ -53,4 +53,30 @@ public final class LophineTpsThrottle {
         }
         return result;
     }
+
+    /**
+     * Convenience method: returns {@code true} if the server TPS has dropped
+     * below the given threshold, indicating that callers should throttle work.
+     * Uses the 5-second TPS average.
+     *
+     * @param tpsThreshold TPS value below which throttling is recommended
+     * @return true if current TPS is below the threshold
+     */
+    public static boolean shouldThrottle(double tpsThreshold) {
+        double[] tps = recentTps();
+        return tps[0] < tpsThreshold;
+    }
+
+    /**
+     * Convenience method: returns the current 5-second TPS average, safely
+     * falling back to 20.0 if the server is not yet initialized.
+     */
+    public static double currentTps() {
+        try {
+            double[] tps = recentTps();
+            return tps[0];
+        } catch (Throwable t) {
+            return 20.0;
+        }
+    }
 }

@@ -218,10 +218,19 @@ diff --git a/net/minecraft/world/level/redstone/NeighborUpdater.java b/net/minec
 index af21821513f11011e7bf3841d2f79cb99e4cd517..32488203ff074b675f5c8831d157b1d91bae48a9 100644
 --- a/net/minecraft/world/level/redstone/NeighborUpdater.java
 +++ b/net/minecraft/world/level/redstone/NeighborUpdater.java
-@@ -63,9 +63,22 @@ public interface NeighborUpdater {
+@@ -63,9 +63,31 @@ public interface NeighborUpdater {
              } finally { if (levelChunk != null) levelChunk.getChunkHot().stopTickingAndCount(); } // KioCG
              // Spigot start
          } catch (StackOverflowError ex) {
++            // Lophine start - max redstone update depth guard
++            if (fun.bm.lophine.config.modules.experiment.RedStoneConfig.maxRedstoneUpdateDepth > 0) {
++                int _depth = ex.getStackTrace().length;
++                if (_depth > fun.bm.lophine.config.modules.experiment.RedStoneConfig.maxRedstoneUpdateDepth) {
++                    level.lastPhysicsProblem = pos.immutable();
++                    return;
++                }
++            }
++            // Lophine end - max redstone update depth guard
 +            // Leaves start - update suppression crash fix
 +            if (fun.bm.lophine.config.modules.fixes.UpdateSuppressionCrashFixConfig.enabled) {
 +                throw new org.leavesmc.leaves.util.UpdateSuppressionException(pos, level, neighborBlock, null, ex);

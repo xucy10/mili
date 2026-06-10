@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.List;
 
 /**
  * Lophine - Folia safety utilities for fake players (ServerBot).
@@ -158,6 +160,53 @@ public final class LophineBotUtil {
             return false;
         }
         return TickThread.isTickThreadFor(world, location.getBlockX() >> 4, location.getBlockZ() >> 4);
+    }
+
+    /**
+     * Lophine - safely iterate over a bot list in a Folia multithreaded environment.
+     * For each bot, checks if we are on the bot's region thread:
+     * <ul>
+     *   <li>If yes, executes the action immediately</li>
+     *   <li>If no, schedules the action on the bot's region via the entity scheduler</li>
+     * </ul>
+     * This prevents cross-region data access violations that can corrupt chunk state
+     * or crash the server.
+     *
+     * @param bots   the list of ServerBot instances to iterate
+     * @param action the action to perform on each bot
+     */
+    @SuppressWarnings("unchecked")
+    public static void forEachSafe(List<? extends LivingEntity> bots, Consumer<LivingEntity> action) {
+        if (bots == null || bots.isEmpty()) {
+            return;
+        }
+        for (LivingEntity bot : bots) {
+            if (bot == null || bot.level() == null || bot.isRemoved()) {
+                continue;
+            }
+            if (TickThread.isTickThreadFor(bot.level(), bot.getX(), bot.getZ())) {
+                try {
+                    action.accept(bot);
+                } catch (Throwable t) {
+                    LOGGER.warn("[forEachSafe] Error processing bot {}: {}", bot.getName().getString(), t.getMessage());
+                }
+            } else {
+                // Schedule on the bot's owning region thread
+                try {
+                    bot.getBukkitEntity().taskScheduler.schedule(
+                            (LivingEntity e) -> {
+                                try {
+                                    action.accept(e);
+                                } catch (Throwable t) {
+                                    LOGGER.warn("[forEachSafe] Error processing bot {} (scheduled): {}", e.getName().getString(), t.getMessage());
+                                }
+                            }, null, 1L
+                    );
+                } catch (Throwable t) {
+                    LOGGER.debug("[forEachSafe] Failed to schedule bot {}: {}", bot.getName().getString(), t.getMessage());
+                }
+            }
+        }
     }
 
     private static final Map<String, Long> lastWarnAt = new ConcurrentHashMap<>();
