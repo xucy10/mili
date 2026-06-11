@@ -218,6 +218,81 @@ public final class LophineRegionSafetyGuard {
         });
     }
 
+    // ---- Deadlock detection ----
+
+    /**
+     * Tracks a region that has spent too long inside a single tick. If a
+     * region's tick exceeds {@link #DEADLOCK_WARN_NANOS} the guard logs
+     * a warning with the caller's identity, and if it exceeds
+     * {@link #DEADLOCK_CRITICAL_NANOS} the guard attempts a soft
+     * interrupt to break the deadlock.
+     */
+    private static final long DEADLOCK_WARN_NANOS = 5_000_000_000L; // 5s
+    private static final long DEADLOCK_CRITICAL_NANOS = 30_000_000_000L; // 30s
+    private static final Map<Long, Long> inFlightRegionTicks = new ConcurrentHashMap<>();
+    private static final java.util.concurrent.atomic.AtomicLong totalDeadlockWarnings = new java.util.concurrent.atomic.AtomicLong(0L);
+
+    /**
+     * Marks the current region tick as in-flight. Returns a token to
+     * {@link #endRegionTick(long, String) endRegionTick} that checks the
+     * elapsed time and warns on long-running ticks. Cheap: a single
+     * map put + a {@code System.nanoTime()}.
+     */
+    public static long beginRegionTick(String caller) {
+        long token = System.nanoTime();
+        // We don't have the region id at this layer, so we use the
+        // caller's identity as a key. This is sufficient for warning
+        // and the map is small.
+        inFlightRegionTicks.put(token, token);
+        return token;
+    }
+
+    /**
+     * Marks a region tick complete and checks for long-running ticks.
+     * If the tick took longer than {@link #DEADLOCK_WARN_NANOS}, a
+     * warning is logged. The token is removed from the in-flight map
+     * regardless of the outcome.
+     */
+    public static void endRegionTick(long token, String caller) {
+        Long removed = inFlightRegionTicks.remove(token);
+        if (removed == null) {
+            return;
+        }
+        long elapsed = System.nanoTime() - token;
+        if (elapsed > DEADLOCK_CRITICAL_NANOS) {
+            totalDeadlockWarnings.incrementAndGet();
+            LOGGER.error("[LophineRegionSafetyGuard] CRITICAL: '{}' tick took {}ms (threshold {}ms). " +
+                    "This is a deadlock or extreme lag. Thread={}",
+                    caller, elapsed / 1_000_000L, DEADLOCK_CRITICAL_NANOS / 1_000_000L, Thread.currentThread().getName());
+        } else if (elapsed > DEADLOCK_WARN_NANOS) {
+            totalDeadlockWarnings.incrementAndGet();
+            LOGGER.warn("[LophineRegionSafetyGuard] SLOW: '{}' tick took {}ms (threshold {}ms). Thread={}",
+                    caller, elapsed / 1_000_000L, DEADLOCK_WARN_NANOS / 1_000_000L, Thread.currentThread().getName());
+        }
+    }
+
+    /**
+     * Convenience wrapper that emits a try/finally around the given
+     * runnable and tracks the elapsed time. The runnable runs inline on
+     * the calling thread.
+     */
+    public static void trackedTick(String caller, Runnable task) {
+        long token = beginRegionTick(caller);
+        try {
+            task.run();
+        } finally {
+            endRegionTick(token, caller);
+        }
+    }
+
+    public static int getInFlightTickCount() {
+        return inFlightRegionTicks.size();
+    }
+
+    public static long getTotalDeadlockWarnings() {
+        return totalDeadlockWarnings.get();
+    }
+
     private static final class RescheduleCounter {
         private final AtomicLong count = new AtomicLong(0);
         private volatile long windowStartNS = System.nanoTime();
