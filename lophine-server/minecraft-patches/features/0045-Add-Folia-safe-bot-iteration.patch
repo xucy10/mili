@@ -41,8 +41,8 @@ index 3a5319739f0687fc6f09b2ac8ee31716593fe0de..00000000000000000000000000000000
 -                bot1.sendFakeDataIfNeed(player, true);
 -            }); // Leaves - render bot
 +            // Lophine start - Folia-safe: use forEachSafe to avoid cross-region access
-+            org.leavesmc.leaves.bot.LophineBotUtil.forEachSafe(this.server.getBotList().bots, bot -> {
-+                org.leavesmc.leaves.bot.ServerBot sb = (org.leavesmc.leaves.bot.ServerBot) bot;
++            org.leavesmc.leaves.bot.LophineBotUtil.forEachSafe(this.server.getBotList().bots, bot1 -> {
++                org.leavesmc.leaves.bot.ServerBot sb = (org.leavesmc.leaves.bot.ServerBot) bot1;
 +                sb.sendPlayerInfo(player);
 +                sb.sendFakeDataIfNeed(player, true);
 +            });
