@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 name: Mili CI
+=======
+name: Mili  CI
+>>>>>>> 6378a2ab734b0b4ab13a0a153ea18c9fb4028701
 
 on:
   push:
@@ -49,9 +53,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
+<<<<<<< HEAD
           cache-exclude: |
             **/paperweight/taskCache/**
             **/paperweight/upstreams/**
+=======
+>>>>>>> 6378a2ab734b0b4ab13a0a153ea18c9fb4028701
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
