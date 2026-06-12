@@ -8,25 +8,21 @@ entities are near players. Uses hash-based round-robin budget distribution
 to spread updates evenly across ticks and TPS-aware throttling during lag.
 
 diff --git a/net/minecraft/server/level/ChunkMap.java b/net/minecraft/server/level/ChunkMap.java
-index 4cd5c5659ac098c3b7ff95efb94b1987e2dd40d0..0000000 100644
+index bca2c5410aa543d2bb421e53893e9163508b3568..0000000 100644
 --- a/net/minecraft/server/level/ChunkMap.java
 +++ b/net/minecraft/server/level/ChunkMap.java
-@@ -1305,6 +1305,7 @@
-     protected void tick(BooleanSupplier hasTimeLeft) {
-         ProfilerFiller profilerFiller = Profiler.get();
-         profilerFiller.push("chunkMap");
-+        fun.bm.mili.utils.EntityTrackingThrottle.onTickStart(); // Lophine - Entity tracking perf
-         // Folia start - region threading - chunk sending
-         if (!this.level.isIteratingTickingRegions()) {
-         this.distanceManager.purgeStaleTickets();
-@@ -1371,5 +1372,9 @@
-         // Paper start - optimise entity tracker
-         for (TrackedEntity trackedEntity : this.entityMap.values()) {
--            trackedEntity.broadcastChanges();
-+            // Lophine start - Entity tracking perf
-+            if (fun.bm.mili.utils.EntityTrackingThrottle.shouldBroadcast(trackedEntity.entity)) {
-+                trackedEntity.broadcastChanges();
-+            }
-+            // Lophine end
+@@ -1067,7 +1067,9 @@
+             if (((ca.spottedleaf.moonrise.patches.entity_tracker.EntityTrackerTrackedEntity)tracker).moonrise$hasPlayers()
+                 || ((ca.spottedleaf.moonrise.patches.chunk_system.entity.ChunkSystemEntity)entity).moonrise$getChunkStatus().isOrAfter(FullChunkStatus.ENTITY_TICKING)) {
++                if (fun.bm.mili.utils.EntityTrackingThrottle.shouldBroadcast(entity)) { // Lophine - Entity tracking perf
+                 tracker.serverEntity.sendChanges();
++                } // Lophine - Entity tracking perf
+             }
          }
-         // Paper end - optimise entity tracker
+         profiler.addCounter(ca.spottedleaf.leafprofiler.LProfilerRegistry.TRACKED_ENTITY_COUNTS, (long)totalEntities); // Folia - profiler
+@@ -1078,6 +1080,7 @@
+     protected void tick() {
++        fun.bm.mili.utils.EntityTrackingThrottle.onTickStart(); // Lophine - Entity tracking perf
+         // Paper start - optimise entity tracker
+         if (true) {
+             this.newTrackerTick();
