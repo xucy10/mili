@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lophine <lophine@dev.null>
+Date: Fri, 12 Jun 2026 00:00:00 +0800
+Subject: [PATCH] Entity tracking broadcast performance optimization
+
+Throttles entity tracking broadcasts to reduce network latency when many
+entities are near players. Uses hash-based round-robin budget distribution
+to spread updates evenly across ticks and TPS-aware throttling during lag.
+
+diff --git a/net/minecraft/server/level/ChunkMap.java b/net/minecraft/server/level/ChunkMap.java
+index fdccb06c918d387e46c29ede7337159db8c5d9ca..a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 100644
+--- a/net/minecraft/server/level/ChunkMap.java
++++ b/net/minecraft/server/level/ChunkMap.java
+@@ -1305,6 +1305,7 @@
+     protected void tick(BooleanSupplier hasTimeLeft) {
+         ProfilerFiller profilerFiller = Profiler.get();
+         profilerFiller.push("chunkMap");
++        fun.bm.mili.utils.EntityTrackingThrottle.onTickStart(); // Lophine - Entity tracking perf
+         // Folia start - region threading - chunk sending
+         if (!this.level.isIteratingTickingRegions()) {
+         this.distanceManager.purgeStaleTickets();
+@@ -1371,7 +1372,11 @@
+         // Paper start - optimise entity tracker
+         for (TrackedEntity trackedEntity : this.entityMap.values()) {
+-            trackedEntity.broadcastChanges();
++            // Lophine start - Entity tracking perf
++            if (fun.bm.mili.utils.EntityTrackingThrottle.shouldBroadcast(trackedEntity.entity)) {
++                trackedEntity.broadcastChanges();
++            }
++            // Lophine end
+         }
+         // Paper end - optimise entity tracker
