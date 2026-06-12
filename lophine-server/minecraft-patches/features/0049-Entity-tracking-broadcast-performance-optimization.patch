@@ -8,7 +8,7 @@ entities are near players. Uses hash-based round-robin budget distribution
 to spread updates evenly across ticks and TPS-aware throttling during lag.
 
 diff --git a/net/minecraft/server/level/ChunkMap.java b/net/minecraft/server/level/ChunkMap.java
-index fdccb06c918d387e46c29ede7337159db8c5d9ca..a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 100644
+index 2b78040daeb3b09c08494cbc1d4a9d36080895f9..51cd683a9e0f1c2d3b4a5968776a5b4c3d2e1f0a 100644
 --- a/net/minecraft/server/level/ChunkMap.java
 +++ b/net/minecraft/server/level/ChunkMap.java
 @@ -1305,6 +1305,7 @@
@@ -19,7 +19,7 @@ index fdccb06c918d387e46c29ede7337159db8c5d9ca..a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
          // Folia start - region threading - chunk sending
          if (!this.level.isIteratingTickingRegions()) {
          this.distanceManager.purgeStaleTickets();
-@@ -1371,7 +1372,11 @@
+@@ -1371,5 +1372,9 @@
          // Paper start - optimise entity tracker
          for (TrackedEntity trackedEntity : this.entityMap.values()) {
 -            trackedEntity.broadcastChanges();
