@@ -35,7 +35,7 @@ index 14ffbcb66006878eacf310547dad53718f8308eb..6c108bc7d93196803daeef4751d06caf
  
          this.scheduleInternal(ret, initialDelayTicks);
  
-@@ -133,7 +135,51 @@ public class FoliaGlobalRegionScheduler implements GlobalRegionScheduler {
+@@ -133,7 +135,72 @@ public class FoliaGlobalRegionScheduler implements GlobalRegionScheduler {
          }
      }
  
