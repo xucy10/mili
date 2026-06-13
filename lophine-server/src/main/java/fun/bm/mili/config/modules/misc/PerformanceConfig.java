@@ -73,6 +73,30 @@ public class PerformanceConfig implements IConfigModule {
             Timeout in minutes for player profile result caching.""")
     public static int profileResultCachingTimeout = 30;
 
+    @ConfigInfo(name = "enable-projectile-chunk-load-limit", comments = """
+            Enables projectile chunk loading limit to prevent lag from many projectiles.
+            Based on Pufferfish's reduce projectile chunk loading optimization.""")
+    public static boolean enableProjectileChunkLoadLimit = false;
+
+    @ConfigInfo(name = "projectile-max-chunk-loads-per-tick", comments = """
+            Maximum chunks that can be loaded by projectiles per tick.
+            -1 = disabled. Prevents projectile spam from causing chunk load lag.""")
+    public static int projectileMaxChunkLoadsPerTick = 200;
+
+    @ConfigInfo(name = "projectile-max-chunk-loads-per-projectile", comments = """
+            Maximum chunks a single projectile can load in its lifetime.
+            -1 = disabled.""")
+    public static int projectileMaxChunkLoadsPerProjectile = 50;
+
+    @ConfigInfo(name = "projectile-remove-after-reach-limit", comments = """
+            Remove projectile from world after reaching chunk load limit.""")
+    public static boolean projectileRemoveAfterReachLimit = true;
+
+    @ConfigInfo(name = "projectile-reset-movement-after-reach-limit", comments = """
+            Reset projectile horizontal movement after reaching chunk load limit.
+            Vertical movement is preserved.""")
+    public static boolean projectileResetMovementAfterReachLimit = false;
+
     @Override
     public void onLoaded(CommentedFileConfig configInstance, @Nullable Set<Exception> exs) {
         if (!logThreadRecommendation) return;

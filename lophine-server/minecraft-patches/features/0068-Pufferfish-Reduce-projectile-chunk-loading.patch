@@ -40,26 +40,28 @@ index 36479ed544ce812113c9a9c982a74a950cb9b26a..c3e6a30931389b14004fa8cb58c63b17
 +            boolean isLoaded = ((net.minecraft.server.level.ServerChunkCache) this.level().getChunkSource()).getChunkAtIfLoadedImmediately(newX, newZ) != null;
 +
 +            if (!isLoaded) {
-+                int maxChunkLoadsPerTick = this.level().paperConfig().projectilePerTick;
++                if (fun.bm.mili.config.modules.misc.PerformanceConfig.enableProjectileChunkLoadLimit) {
++                    int maxChunkLoadsPerTick = fun.bm.mili.config.modules.misc.PerformanceConfig.projectileMaxChunkLoadsPerTick;
 +
-+                if (maxChunkLoadsPerTick >= 0 && chunksLoadedThisTick.get() > maxChunkLoadsPerTick) {
-+                    return;
-+                }
-+
-+                int maxChunkLoadsPerProjectile = this.level().paperConfig().projectileMax;
-+
-+                if (maxChunkLoadsPerProjectile >= 0 && this.chunksLoadedByProjectile >= maxChunkLoadsPerProjectile) {
-+                    if (this.level().paperConfig().projectileRemoveAfterReachLimit) {
-+                        this.discard();
-+                    } else if (this.level().paperConfig().projectileResetMovementAfterReachLimit) {
-+                        this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
++                    if (maxChunkLoadsPerTick >= 0 && chunksLoadedThisTick.get() > maxChunkLoadsPerTick) {
++                        return;
 +                    }
 +
-+                    return;
-+                }
++                    int maxChunkLoadsPerProjectile = fun.bm.mili.config.modules.misc.PerformanceConfig.projectileMaxChunkLoadsPerProjectile;
 +
-+                chunksLoadedThisTick.incrementAndGet();
-+                this.chunksLoadedByProjectile++;
++                    if (maxChunkLoadsPerProjectile >= 0 && this.chunksLoadedByProjectile >= maxChunkLoadsPerProjectile) {
++                        if (fun.bm.mili.config.modules.misc.PerformanceConfig.projectileRemoveAfterReachLimit) {
++                            this.discard();
++                        } else if (fun.bm.mili.config.modules.misc.PerformanceConfig.projectileResetMovementAfterReachLimit) {
++                            this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
++                        }
++
++                        return;
++                    }
++
++                    chunksLoadedThisTick.incrementAndGet();
++                    this.chunksLoadedByProjectile++;
++                }
 +            }
 +        }
 +
