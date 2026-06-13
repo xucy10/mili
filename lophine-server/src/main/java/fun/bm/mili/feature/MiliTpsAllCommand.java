@@ -45,8 +45,9 @@ import java.util.function.Consumer;
  * main thread via {@link Bukkit#isPrimaryThread()} reschedule.
  */
 public class MiliTpsAllCommand extends RootNode {
-    private static final DecimalFormat ONE_DECIMAL = new DecimalFormat("#,##0.0");
-    private static final DecimalFormat TWO_DECIMALS = new DecimalFormat("#,##0.00");
+    // DecimalFormat is NOT thread-safe; use ThreadLocal for concurrent region threads
+    private static final ThreadLocal<DecimalFormat> ONE_DECIMAL = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.0"));
+    private static final ThreadLocal<DecimalFormat> TWO_DECIMALS = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.00"));
 
     public MiliTpsAllCommand() {
         super("tpsall", "lophine.commands.tpsall");
@@ -128,20 +129,20 @@ public class MiliTpsAllCommand extends RootNode {
     
                 // TPS with bar
                 lines.add(Component.text("  TPS: ").color(NamedTextColor.GRAY)
-                        .append(Component.text(TWO_DECIMALS.format(tps) + " / 20.00").color(tpsColor(tps)))
+                        .append(Component.text(TWO_DECIMALS.get().format(tps) + " / 20.00").color(tpsColor(tps)))
                         .append(Component.text("  " + tpsBar(tps)).color(NamedTextColor.DARK_GRAY)));
     
                 // MSPT with hover for peak
                 lines.add(Component.text("  MSPT: ").color(NamedTextColor.GRAY)
-                        .append(Component.text(TWO_DECIMALS.format(mspt) + " ms").color(msptColor(mspt)))
-                        .append(Component.text("  (\u5cf0\u503c " + TWO_DECIMALS.format(maxMspt) + " ms)")
+                        .append(Component.text(TWO_DECIMALS.get().format(mspt) + " ms").color(msptColor(mspt)))
+                        .append(Component.text("  (\u5cf0\u503c " + TWO_DECIMALS.get().format(maxMspt) + " ms)")
                                 .color(NamedTextColor.DARK_GRAY)));
     
                 // Utilisation bar
                 NamedTextColor utilColor = utilisation >= 80 ? NamedTextColor.RED
                         : (utilisation >= 50 ? NamedTextColor.YELLOW : NamedTextColor.GREEN);
                 lines.add(Component.text("  \u4f7f\u7528\u7387: ").color(NamedTextColor.GRAY)
-                        .append(Component.text(ONE_DECIMAL.format(utilisation) + "%").color(utilColor))
+                        .append(Component.text(ONE_DECIMAL.get().format(utilisation) + "%").color(utilColor))
                         .append(Component.text("  " + utilBar(utilisation)).color(utilColor)));
     
                 // Separator

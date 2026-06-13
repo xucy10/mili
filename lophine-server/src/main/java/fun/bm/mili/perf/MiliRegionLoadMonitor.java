@@ -210,6 +210,8 @@ public class MiliRegionLoadMonitor implements IConfigModule {
         if (!LAST_SUMMARY_NANOS.compareAndSet(LAST_SUMMARY_NANOS.get(), now)) {
             return;
         }
+        // GC stale region entries (regions destroyed by Folia split/merge)
+        gcDestroyedRegions(600_000_000_000L /* 10 minutes */);
         String summary = buildSummary();
         LAST_SUMMARY.set(summary);
         LOGGER.info(summary);

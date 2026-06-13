@@ -41,8 +41,9 @@ import java.util.List;
  * <p>Aliases: {@code /lperf}, {@code /lophineperf}.
  */
 public class MiliPerfCommand extends RootNode {
-    private static final DecimalFormat F1 = new DecimalFormat("#,##0.0");
-    private static final DecimalFormat F2 = new DecimalFormat("#,##0.00");
+    // DecimalFormat is NOT thread-safe; use ThreadLocal for concurrent region threads
+    private static final ThreadLocal<DecimalFormat> F1 = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.0"));
+    private static final ThreadLocal<DecimalFormat> F2 = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.00"));
 
     public MiliPerfCommand() {
         super("lophine-perf", "lophine.commands.perf");
@@ -156,7 +157,7 @@ public class MiliPerfCommand extends RootNode {
                     .append(Component.text(pad(String.valueOf(d.chunkCount()), 6)).color(NamedTextColor.WHITE))
                     .append(Component.text(pad(String.valueOf(d.entityCount()), 5)).color(NamedTextColor.WHITE))
                     .append(Component.text(pad(String.valueOf(d.playerCount()), 5)).color(NamedTextColor.WHITE))
-                    .append(Component.text(F1.format(d.emaLoadScore())).color(loadColor))
+                    .append(Component.text(F1.get().format(d.emaLoadScore())).color(loadColor))
                     .hoverEvent(HoverEvent.showText(hover));
 
             if (d.consecutiveSlow() >= MiliRegionLoadMonitor.slowRegionConsecutive) {
@@ -190,23 +191,23 @@ public class MiliPerfCommand extends RootNode {
                 .append(Component.text("━━━━━━━━━━━━━━━━").color(NamedTextColor.DARK_GRAY))
                 .append(Component.newline())
                 .append(Component.text("EMA 负载: ").color(NamedTextColor.GRAY))
-                .append(Component.text(F1.format(d.emaLoadScore())).color(NamedTextColor.WHITE))
+                .append(Component.text(F1.get().format(d.emaLoadScore())).color(NamedTextColor.WHITE))
                 .append(Component.text("  峰值: ").color(NamedTextColor.GRAY))
-                .append(Component.text(F1.format(d.peakLoadScore())).color(NamedTextColor.WHITE));
+                .append(Component.text(F1.get().format(d.peakLoadScore())).color(NamedTextColor.WHITE));
 
         if (d.lastMspt() >= 0) {
             hover.append(Component.newline())
                     .append(Component.text("MSPT: ").color(NamedTextColor.GRAY))
-                    .append(Component.text(F2.format(d.lastMspt()) + " ms").color(msptColor(d.lastMspt())))
+                    .append(Component.text(F2.get().format(d.lastMspt()) + " ms").color(msptColor(d.lastMspt())))
                     .append(Component.text("  均值: ").color(NamedTextColor.GRAY))
-                    .append(Component.text(F2.format(d.emaMspt()) + " ms").color(NamedTextColor.WHITE))
+                    .append(Component.text(F2.get().format(d.emaMspt()) + " ms").color(NamedTextColor.WHITE))
                     .append(Component.text("  峰值: ").color(NamedTextColor.GRAY))
-                    .append(Component.text(F2.format(d.peakMspt()) + " ms").color(NamedTextColor.RED));
+                    .append(Component.text(F2.get().format(d.peakMspt()) + " ms").color(NamedTextColor.RED));
         }
         if (d.lastTps() >= 0) {
             hover.append(Component.newline())
                     .append(Component.text("TPS: ").color(NamedTextColor.GRAY))
-                    .append(Component.text(F2.format(d.lastTps())).color(tpsColor(d.lastTps())));
+                    .append(Component.text(F2.get().format(d.lastTps())).color(tpsColor(d.lastTps())));
         }
 
         hover.append(Component.newline())
