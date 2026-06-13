@@ -6,6 +6,7 @@ import fun.bm.mili.perf.MiliRegionLoadMonitor.RegionDisplayData;
 import fun.bm.mili.perf.MiliTickProfiler;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -173,7 +174,7 @@ public class MiliPerfCommand extends RootNode {
     }
 
     private static Component buildRegionHover(RegionDisplayData d) {
-        Component.Builder hover = Component.text()
+        TextComponent.Builder hover = Component.text()
                 .append(Component.text("区域 #" + d.regionId()).color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD))
                 .append(Component.newline())
                 .append(Component.text("维度: ").color(NamedTextColor.GRAY))

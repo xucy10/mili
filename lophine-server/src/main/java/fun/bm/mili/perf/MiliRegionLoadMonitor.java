@@ -129,7 +129,7 @@ public class MiliRegionLoadMonitor implements IConfigModule {
 
     private static void sampleLevel(ServerLevel level, long nowNanos) {
         try {
-            final String levelName = level.dimension().location().toString();
+            final String levelName = level.dimension().identifier().toString();
             level.regioniser.computeForAllRegions(region -> {
                 TickRegions.TickRegionData data = region.getData();
                 if (data == null) {
@@ -262,7 +262,7 @@ public class MiliRegionLoadMonitor implements IConfigModule {
             }
             if (shown >= 15) break;
 
-            String loadTag = loadTag(s);
+            String loadTag = computeLoadTag(s);
             String msptInfo = s.lastMspt >= 0
                     ? String.format(" mspt=%.1f/avg=%.1f", s.lastMspt, s.emaMspt)
                     : "";
@@ -298,7 +298,7 @@ public class MiliRegionLoadMonitor implements IConfigModule {
         return Collections.unmodifiableList(result);
     }
 
-    private static String loadTag(RegionSample s) {
+    private static String computeLoadTag(RegionSample s) {
         if (s.entityCount == 0 && s.chunkCount == 0 && s.emaLoadScore < 1.0) return "IDLE";
         if (s.emaLoadScore < 500) return "LOW ";
         if (s.emaLoadScore < 2000) return "MED ";
@@ -329,7 +329,7 @@ public class MiliRegionLoadMonitor implements IConfigModule {
             this(id, s.levelName, s.chunkCount, s.entityCount, s.playerCount,
                     s.emaLoadScore, s.peakLoadScore, s.lastMspt, s.emaMspt,
                     s.peakMspt, s.lastTps, s.samplesTaken, s.consecutiveSlow,
-                    loadTag(s).trim());
+                    computeLoadTag(s).trim());
         }
     }
 
