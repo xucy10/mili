@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 17:20:00 +0800
+Subject: [PATCH] SparklyPaper: Skip distanceToSqr call in
+ ServerEntity#sendChanges if the delta movement hasn't changed
+
+Original project: https://github.com/SparklyPower/SparklyPaper
+
+Patch description:
+
+The "distanceToSqr" call is a bit expensive, so avoiding it is pretty nice, around ~15% calls are skipped with this check
+
+diff --git a/net/minecraft/server/level/ServerEntity.java b/net/minecraft/server/level/ServerEntity.java
+index 3a817c92147bb78c60238f3ddc1644b721aed7a2..ec05269a2ec8b416582da8ff0c7da7ac83e4e8fa 100644
+--- a/net/minecraft/server/level/ServerEntity.java
++++ b/net/minecraft/server/level/ServerEntity.java
+@@ -197,23 +197,27 @@ public class ServerEntity {
+ 
+                 if (this.entity.needsSync || this.trackDelta || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying()) {
+                     Vec3 deltaMovement = this.entity.getDeltaMovement();
+-                    double d = deltaMovement.distanceToSqr(this.lastSentMovement);
+-                    if (d > 1.0E-7 || d > 0.0 && deltaMovement.lengthSqr() == 0.0) {
+-                        this.lastSentMovement = deltaMovement;
+-                        if (this.entity instanceof AbstractHurtingProjectile abstractHurtingProjectile) {
+-                            this.synchronizer
+-                                .sendToTrackingPlayers(
+-                                    new ClientboundBundlePacket(
+-                                        List.of(
+-                                            new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement),
+-                                            new ClientboundProjectilePowerPacket(abstractHurtingProjectile.getId(), abstractHurtingProjectile.accelerationPower)
++                    // Mili start - Skip "distanceToSqr" call in "ServerEntity#sendChanges" if the delta movement hasn't changed
++                    if (deltaMovement != this.lastSentMovement) {
++                        double d = deltaMovement.distanceToSqr(this.lastSentMovement);
++                        if (d > 1.0E-7 || d > 0.0 && deltaMovement.lengthSqr() == 0.0) {
++                            this.lastSentMovement = deltaMovement;
++                            if (this.entity instanceof AbstractHurtingProjectile abstractHurtingProjectile) {
++                                this.synchronizer
++                                    .sendToTrackingPlayers(
++                                        new ClientboundBundlePacket(
++                                            List.of(
++                                                new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement),
++                                                new ClientboundProjectilePowerPacket(abstractHurtingProjectile.getId(), abstractHurtingProjectile.accelerationPower)
++                                            )
+                                         )
+-                                    )
+-                                );
+-                        } else {
+-                            this.synchronizer.sendToTrackingPlayers(new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement));
++                                    );
++                            } else {
++                                this.synchronizer.sendToTrackingPlayers(new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement));
++                            }
+                         }
+                     }
++                    // Mili end - Skip "distanceToSqr" call in "ServerEntity#sendChanges" if the delta movement hasn't changed
+                 }
+ 
+                 if (packet != null) {

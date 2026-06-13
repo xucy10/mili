@@ -35,6 +35,44 @@ public class PerformanceConfig implements IConfigModule {
             Useful for first-time setup; disable once you have configured paper-global.yml.""")
     public static boolean logThreadRecommendation = true;
 
+    @ConfigInfo(name = "enable-equipment-tracking", comments = """
+            Enables equipment tracking optimization to reduce unnecessary enchantment ticking.
+            Based on Lithium's equipment tracking optimization.
+            Only affects non-player entities.""")
+    public static boolean enableEquipmentTracking = false;
+
+    @ConfigInfo(name = "enable-suffocation-optimization", comments = """
+            Enables suffocation optimization to reduce unnecessary damage checks.
+            Based on Pufferfish's suffocation optimization.
+            Checks if entity could possibly be hurt before checking isInWall().""")
+    public static boolean enableSuffocationOptimization = false;
+
+    @ConfigInfo(name = "enable-reduce-chunk-loading-lookups", comments = """
+            Enables reduced chunk loading & lookups optimization.
+            Based on Pufferfish's reduce chunk loading & lookups optimization.
+            Uses getChunkIfLoaded instead of getBlockState to prevent unnecessary chunk loading.""")
+    public static boolean enableReduceChunkLoadingLookups = false;
+
+    @ConfigInfo(name = "enable-sheep-optimization", comments = """
+            Enables sheep color mixing optimization.
+            Based on Carpet-Fixes sheep optimization.
+            Uses pre-computed color lookup table instead of recipe matching.""")
+    public static boolean enableSheepOptimization = false;
+
+    @ConfigInfo(name = "enable-command-block-parse-results-caching", comments = """
+            Enables command block parse results caching.
+            Caches parse results to avoid re-parsing the same command.""")
+    public static boolean enableCommandBlockParseResultsCaching = false;
+
+    @ConfigInfo(name = "enable-profile-result-caching", comments = """
+            Enables player profile result caching.
+            Caches Mojang session service results to reduce API calls.""")
+    public static boolean enableProfileResultCaching = false;
+
+    @ConfigInfo(name = "profile-result-caching-timeout", comments = """
+            Timeout in minutes for player profile result caching.""")
+    public static int profileResultCachingTimeout = 30;
+
     @Override
     public void onLoaded(CommentedFileConfig configInstance, @Nullable Set<Exception> exs) {
         if (!logThreadRecommendation) return;

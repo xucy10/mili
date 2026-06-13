@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 17:30:00 +0800
+Subject: [PATCH] Carpet-Fixes: RecipeManager Optimize
+
+Original project: https://github.com/fxmorin/carpet-fixes
+Optimized the RecipeManager getFirstMatch call to be up to 3x faster
+This is a fully vanilla optimization.
+
+diff --git a/net/minecraft/world/item/crafting/RecipeManager.java b/net/minecraft/world/item/crafting/RecipeManager.java
+index 4e0b0d630e18bde916a07889bcaf0e7accf064ca..e31ab0cb57794547f1122badb9e3e74fa57f16e1 100644
+--- a/net/minecraft/world/item/crafting/RecipeManager.java
++++ b/net/minecraft/world/item/crafting/RecipeManager.java
+@@ -167,7 +167,7 @@ public class RecipeManager extends SimplePreparableReloadListener<RecipeMap> imp
+ 
+     public <I extends RecipeInput, T extends Recipe<I>> Optional<RecipeHolder<T>> getRecipeFor(RecipeType<T> recipeType, I input, Level level) {
+         // CraftBukkit start
+-        List<RecipeHolder<T>> list = this.recipes.getRecipesFor(recipeType, input, level).toList();
++        List<RecipeHolder<T>> list = this.recipes.getRecipesForList(recipeType, input, level); // Mili - Carpet-Fixes - Remove streams to be faster
+         return (list.isEmpty()) ? Optional.empty() : Optional.of(list.getLast()); // CraftBukkit - SPIGOT-4638: last recipe gets priority
+         // CraftBukkit end
+     }
+diff --git a/net/minecraft/world/item/crafting/RecipeMap.java b/net/minecraft/world/item/crafting/RecipeMap.java
+index 23186a34bcb3ad2e5976f93cf0ff977a8d9a9721..52c1df3b110b5d8760b9d19ac6d8c96cc1248fe7 100644
+--- a/net/minecraft/world/item/crafting/RecipeMap.java
++++ b/net/minecraft/world/item/crafting/RecipeMap.java
+@@ -74,4 +74,24 @@ public class RecipeMap {
+     public <I extends RecipeInput, T extends Recipe<I>> Stream<RecipeHolder<T>> getRecipesFor(RecipeType<T> type, I input, Level level) {
+         return input.isEmpty() ? Stream.empty() : this.byType(type).stream().filter(recipeHolder -> recipeHolder.value().matches(input, level));
+     }
++
++    // Mili start - Carpet-Fixes - Remove streams to be faster
++    public <I extends RecipeInput, T extends Recipe<I>> java.util.List<RecipeHolder<T>> getRecipesForList(RecipeType<T> type, I input, Level world) {
++        java.util.List<RecipeHolder<T>> list;
++
++        if (input.isEmpty()) {
++            return java.util.List.of();
++        } else {
++            list = new java.util.ArrayList<>();
++        }
++
++        for (RecipeHolder<T> recipeholder : this.byType(type)) {
++            if (recipeholder.value().matches(input, world)) {
++                list.add(recipeholder);
++            }
++        }
++
++        return list;
++    }
++    // Mili end - Carpet-Fixes - Remove streams to be faster
+ }

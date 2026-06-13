@@ -35,7 +35,7 @@ index 14ffbcb66006878eacf310547dad53718f8308eb..6c108bc7d93196803daeef4751d06caf
  
          this.scheduleInternal(ret, initialDelayTicks);
  
-@@ -133,7 +135,72 @@ public class FoliaGlobalRegionScheduler implements GlobalRegionScheduler {
+@@ -133,7 +135,77 @@ public class FoliaGlobalRegionScheduler implements GlobalRegionScheduler {
          }
      }
  
@@ -93,6 +93,11 @@ index 14ffbcb66006878eacf310547dad53718f8308eb..6c108bc7d93196803daeef4751d06caf
 +                this.lastTaskId.compareAndSet(id, 1);
 +            }
 +        } while (id <= 0);
++        // Periodic purge of finished/cancelled tasks to prevent taskIndex memory leak
++        // Size-based trigger avoids per-tick overhead; only runs when index grows large
++        if (this.taskIndex.size() > 128) {
++            this.purgeStaleTaskIndex();
++        }
 +        return id;
 +    }
 +

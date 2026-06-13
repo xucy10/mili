@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 16:10:00 +0800
+Subject: [PATCH] Optimize suffocation
+
+Original license: GPL v3
+Original project: https://github.com/pufferfish-gg/Pufferfish
+
+diff --git a/net/minecraft/world/entity/LivingEntity.java b/net/minecraft/world/entity/LivingEntity.java
+index 805c97bdb86e2fd1a431c63451cee78b8ce67ea3..78dd48fd723de021aa9f07b513e367363d3757c1 100644
+--- a/net/minecraft/world/entity/LivingEntity.java
++++ b/net/minecraft/world/entity/LivingEntity.java
+@@ -429,6 +429,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
+         return this.getDeltaMovement().y() < 1.0E-5F && this.isInLiquid();
+     }
+ 
++    // Mili start - Optimize suffocation
++    public boolean couldPossiblyBeHurt(float amount) {
++        return !((float) this.invulnerableTime > (float) this.invulnerableDuration / 2.0F) || !(amount <= this.lastHurt);
++    }
++    // Mili end - Optimize suffocation
++
+     @Override
+     public void baseTick() {
+         this.oAttackAnim = this.attackAnim;
+@@ -445,7 +451,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
+         profilerFiller.push("livingEntityBaseTick");
+         if (this.isAlive() && this.level() instanceof ServerLevel serverLevel1) {
+             boolean flag = this instanceof Player;
+-            if (this.isInWall()) {
++            if ((!fun.bm.mili.config.modules.misc.PerformanceConfig.enableSuffocationOptimization || this instanceof WitherBoss || (tickCount % 10 == 0 && couldPossiblyBeHurt(1.0F))) && this.isInWall()) { // Mili - Optimize suffocation
+                 this.hurtServer(serverLevel1, this.damageSources().inWall(), 1.0F);
+             } else if (flag && !serverLevel1.getWorldBorder().isWithinBounds(this.getBoundingBox())) {
+                 double d = serverLevel1.getWorldBorder().getDistanceToBorder(this) + serverLevel1.getWorldBorder().getSafeZone();

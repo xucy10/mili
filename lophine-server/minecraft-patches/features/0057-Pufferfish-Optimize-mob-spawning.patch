@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 16:30:00 +0800
+Subject: [PATCH] Pufferfish: Optimize mob spawning (Folia compatible)
+
+Original license: GPL v3
+Original project: https://github.com/pufferfish-gg/Pufferfish
+
+This patch optimizes mob spawning by caching spawn state per-region.
+Folia already has regionized mob spawning, so async threading is not needed.
+This version caches the spawn state to avoid redundant calculations.
+
+diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
+index 6714a60f8cea6ca9a51309243128b99f20dc0b81..3d15f39bca9cdb4477b35b90292e8dc508e878b0 100644
+--- a/net/minecraft/server/level/ServerChunkCache.java
++++ b/net/minecraft/server/level/ServerChunkCache.java
+@@ -76,6 +76,9 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+     private final Set<ChunkHolder> chunkHoldersToBroadcast = new ReferenceOpenHashSet<>();
+     @VisibleForDebug
+     private NaturalSpawner.@Nullable SpawnState lastSpawnState;
++    // Mili start - Pufferfish: Optimize mob spawning (Folia compatible)
++    private long lastSpawnStateUpdateTick = -1;
++    // Mili end - Pufferfish: Optimize mob spawning (Folia compatible)
+     // Paper start
+     public final ca.spottedleaf.concurrentutil.map.ConcurrentLong2ReferenceChainedHashTable<net.minecraft.world.level.chunk.LevelChunk> fullChunks = new ca.spottedleaf.concurrentutil.map.ConcurrentLong2ReferenceChainedHashTable<>();
+     public int getFullChunksCount() {
+@@ -532,27 +535,32 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+         int naturalSpawnChunkCount = this.distanceManager.getNaturalSpawnChunkCount();
+         // Paper start - Optional per player mob spawns
+         NaturalSpawner.SpawnState spawnState;
+-        if ((this.spawnFriendlies || this.spawnEnemies) && this.level.paperConfig().entities.spawning.perPlayerMobSpawns) { // don't count mobs when animals and monsters are disabled
+-            // re-set mob counts
+-            for (ServerPlayer player : this.level.players) {
+-                // Paper start - per player mob spawning backoff
+-                for (int ii = 0; ii < ServerPlayer.MOBCATEGORY_TOTAL_ENUMS; ii++) {
+-                    player.mobCounts[ii] = 0;
+-
+-                    int newBackoff = player.mobBackoffCounts[ii] - 1; // TODO make configurable bleed // TODO use nonlinear algorithm?
+-                    if (newBackoff < 0) {
+-                        newBackoff = 0;
+-                    }
+-                    player.mobBackoffCounts[ii] = newBackoff;
++        // Mili start - Pufferfish: Optimize mob spawning (Folia compatible)
++        long currentTick = this.level.getGameTime();
++        boolean shouldUpdateSpawnState = (this.lastSpawnState == null) || 
++            (currentTick - this.lastSpawnStateUpdateTick >= 20); // Update at most once per second
++
++        if (shouldUpdateSpawnState) {
++            if ((this.spawnFriendlies || this.spawnEnemies) && this.level.paperConfig().entities.spawning.perPlayerMobSpawns) {
++                // re-set mob counts
++                for (ServerPlayer player : this.level.players) {
++                    // Paper start - per player mob spawning backoff
++                    for (int ii = 0; ii < ServerPlayer.MOBCATEGORY_TOTAL_ENUMS; ii++) {
++                        player.mobCounts[ii] = 0;
++
++                        int newBackoff = player.mobBackoffCounts[ii] - 1;
++                        if (newBackoff < 0) {
++                            newBackoff = 0;
++                        }
++                        player.mobBackoffCounts[ii] = newBackoff;
++                    }
++                    // Paper end - per player mob spawning backoff
+                 }
+-                // Paper end - per player mob spawning backoff
++                this.lastSpawnState = NaturalSpawner.createState(naturalSpawnChunkCount, this.level.getAllEntities(), this::getFullChunk, new LocalMobCapCalculator(this.chunkMap), true);
++            } else {
++                this.lastSpawnState = NaturalSpawner.createState(naturalSpawnChunkCount, this.level.getAllEntities(), this::getFullChunk, !this.level.paperConfig().entities.spawning.perPlayerMobSpawns ? new LocalMobCapCalculator(this.chunkMap) : null, false);
+             }
+-            spawnState = NaturalSpawner.createState(naturalSpawnChunkCount, this.level.getAllEntities(), this::getFullChunk, null, true);
+-        } else {
+-            spawnState = NaturalSpawner.createState(naturalSpawnChunkCount, this.level.getAllEntities(), this::getFullChunk, !this.level.paperConfig().entities.spawning.perPlayerMobSpawns ? new LocalMobCapCalculator(this.chunkMap) : null, false);
++            this.lastSpawnStateUpdateTick = currentTick;
+         }
++        spawnState = this.lastSpawnState;
++        // Mili end - Pufferfish: Optimize mob spawning (Folia compatible)
+         // Paper end - Optional per player mob spawns
+-        this.lastSpawnState = spawnState;
+         boolean flag = this.level.getGameRules().get(GameRules.SPAWN_MOBS) && !this.level.players().isEmpty(); // CraftBukkit
+         int i = this.level.getGameRules().get(GameRules.RANDOM_TICK_SPEED);
+         List<MobCategory> filteredSpawningCategories;

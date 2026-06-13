@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 17:00:00 +0800
+Subject: [PATCH] C2ME: Optimize world gen math
+
+This patch is based on following mixins:
+* "com/ishland/c2me/opts/math/mixin/MixinChunkPos.java"
+* "com/ishland/c2me/opts/worldgen/vanilla/mixin/structure_weight_sampler/MixinStructureWeightSampler.java"
+By: ishland <ishlandmc@yeah.net>
+As part of: C2ME-fabric (https://github.com/RelativityMC/C2ME-fabric)
+Licensed under: MIT
+
+diff --git a/net/minecraft/world/level/ChunkPos.java b/net/minecraft/world/level/ChunkPos.java
+index de7c262f65557f149e00059c7df85917c9ca4342..6831866429ad9b5f5ca1e9191a9ee3ba3a4b355d 100644
+--- a/net/minecraft/world/level/ChunkPos.java
++++ b/net/minecraft/world/level/ChunkPos.java
+@@ -119,7 +119,12 @@ public class ChunkPos {
+ 
+     @Override
+     public boolean equals(Object other) {
+-        return this == other || other instanceof ChunkPos chunkPos && this.x == chunkPos.x && this.z == chunkPos.z;
++        // Mili start - C2ME: Optimize world gen math
++        if (other == this) return true;
++        if (other == null || other.getClass() != this.getClass()) return false;
++        ChunkPos thatPos = (ChunkPos) other;
++        return this.x == thatPos.x && this.z == thatPos.z;
++        // Mili end - C2ME: Optimize world gen math
+     }
+ 
+     public int getMiddleBlockX() {
+diff --git a/net/minecraft/world/level/levelgen/Beardifier.java b/net/minecraft/world/level/levelgen/Beardifier.java
+index b87fad848fa4342dc420a186a762cc826e9c0294..3e8b852fe7630677f0497e36a176787a9400d5d6 100644
+--- a/net/minecraft/world/level/levelgen/Beardifier.java
++++ b/net/minecraft/world/level/levelgen/Beardifier.java
+@@ -167,8 +167,14 @@ public class Beardifier implements DensityFunctions.BeardifierOrMarker {
+     }
+ 
+     private static double getBuryContribution(double x, double y, double z) {
+-        double len = Mth.length(x, y, z);
+-        return Mth.clampedMap(len, 0.0, 6.0, 1.0, 0.0);
++        // Mili start - C2ME: Optimize world gen math
++        double len = Math.sqrt(x * x + y * y + z * z);
++        if (len > 6.0) {
++            return 0.0;
++        } else {
++            return 1.0 - len / 6.0;
++        }
++        // Mili end - C2ME: Optimize world gen math
+     }
+ 
+     private static double getBeardContribution(int x, int y, int z, int height) {
+diff --git a/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java b/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
+index d1068a122e5dbd5af274d0f8178ca9f5fa49f930..2e02ba3d101eb41b486da7622ada14e330e70dbd 100644
+--- a/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
++++ b/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
+@@ -75,7 +75,10 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
+             if (SharedConstants.DEBUG_DISABLE_FLUID_GENERATION) {
+                 return fluidStatus2;
+             } else {
+-                return y < Math.min(-54, seaLevel) ? fluidStatus : fluidStatus1;
++                // Mili start - C2ME: Optimize world gen math
++                final int min = Math.min(-54, seaLevel);
++                return y < min ? fluidStatus : fluidStatus1;
++                // Mili end - C2ME: Optimize world gen math
+             }
+         };
+     }

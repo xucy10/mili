@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 18:10:00 +0800
+Subject: [PATCH] Pufferfish: Reduce projectile chunk loading
+
+This patch is based on the following patch:
+"Reduce projectile chunk loading"
+By: Paul Sauve <paul@technove.co>
+As part of: Airplane (https://github.com/TECHNOVE/Airplane)
+Licensed under: GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html)
+
+Folia compatibility: Uses region-safe chunk loading checks.
+
+diff --git a/net/minecraft/world/entity/projectile/Projectile.java b/net/minecraft/world/entity/projectile/Projectile.java
+index 36479ed544ce812113c9a9c982a74a950cb9b26a..c3e6a30931389b14004fa8cb58c63b1755e9ccae 100644
+--- a/net/minecraft/world/entity/projectile/Projectile.java
++++ b/net/minecraft/world/entity/projectile/Projectile.java
+@@ -50,6 +50,54 @@ public abstract class Projectile extends Entity implements TraceableEntity {
+         super(type, level);
+     }
+ 
++    // Mili start - Pufferfish: Reduce projectile chunk loading (Folia compatible)
++    private static final java.util.concurrent.atomic.AtomicInteger chunksLoadedThisTick = new java.util.concurrent.atomic.AtomicInteger(0);
++    private static volatile int chunksLoadedInTick;
++    private int chunksLoadedByProjectile = 0;
++
++    @Override
++    public void setPos(double x, double y, double z) {
++        int currentTick = net.minecraft.server.MinecraftServer.currentTick;
++
++        if (chunksLoadedInTick != currentTick) {
++            chunksLoadedInTick = currentTick;
++            chunksLoadedThisTick.set(0);
++        }
++
++        int previousX = Mth.floor(this.getX()) >> 4, previousZ = Mth.floor(this.getZ()) >> 4;
++        int newX = Mth.floor(x) >> 4, newZ = Mth.floor(z) >> 4;
++
++        if (previousX != newX || previousZ != newZ) {
++            boolean isLoaded = ((net.minecraft.server.level.ServerChunkCache) this.level().getChunkSource()).getChunkAtIfLoadedImmediately(newX, newZ) != null;
++
++            if (!isLoaded) {
++                int maxChunkLoadsPerTick = this.level().paperConfig().projectilePerTick;
++
++                if (maxChunkLoadsPerTick >= 0 && chunksLoadedThisTick.get() > maxChunkLoadsPerTick) {
++                    return;
++                }
++
++                int maxChunkLoadsPerProjectile = this.level().paperConfig().projectileMax;
++
++                if (maxChunkLoadsPerProjectile >= 0 && this.chunksLoadedByProjectile >= maxChunkLoadsPerProjectile) {
++                    if (this.level().paperConfig().projectileRemoveAfterReachLimit) {
++                        this.discard();
++                    } else if (this.level().paperConfig().projectileResetMovementAfterReachLimit) {
++                        this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
++                    }
++
++                    return;
++                }
++
++                chunksLoadedThisTick.incrementAndGet();
++                this.chunksLoadedByProjectile++;
++            }
++        }
++
++        super.setPos(x, y, z);
++    }
++    // Mili end - Pufferfish: Reduce projectile chunk loading (Folia compatible)
++
+     protected void setOwner(@Nullable EntityReference<Entity> owner) {
+         this.owner = owner;
+         this.refreshProjectileSource(false); // Paper

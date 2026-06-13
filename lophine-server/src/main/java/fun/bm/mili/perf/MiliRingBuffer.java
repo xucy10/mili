@@ -170,8 +170,13 @@ public final class MiliRingBuffer<E> {
         int idx = (int) (tail & mask);
         Slot<E> slot = slotArray[idx];
         if (slot.state == 0) {
+            // acquire 栅栏后二次检查 / Double-check after acquire fence
             VarHandle.acquireFence();
             if (slot.state == 0) return null;
+        } else {
+            // state!=0 时仍需 acquire 栅栏确保看到生产者写入的 value
+            // Acquire fence needed even when state!=0 to see producer's value write
+            VarHandle.acquireFence();
         }
         return slot.value;
     }

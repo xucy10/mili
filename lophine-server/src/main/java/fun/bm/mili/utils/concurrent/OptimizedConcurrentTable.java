@@ -26,6 +26,10 @@ public class OptimizedConcurrentTable<X, Y, Z> extends ConcurrentTable<X, Y, Z> 
     private final ConcurrentHashMap<Y, ConcurrentHashMap<Z, Set<X>>> yzIndex = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Z, ConcurrentHashMap<X, Set<Y>>> zxIndex = new ConcurrentHashMap<>();
 
+    // putIfAbsent 专用锁，避免在共享的 data 对象上同步
+    // Dedicated lock for putIfAbsent, avoids synchronizing on shared data object
+    private final Object putIfAbsentLock = new Object();
+
     public OptimizedConcurrentTable() {
         super();
     }
@@ -127,7 +131,7 @@ public class OptimizedConcurrentTable<X, Y, Z> extends ConcurrentTable<X, Y, Z> 
      * check-then-act atomicity. 避免 TOCTOU 竞态 / Avoids TOCTOU race condition.
      */
     public boolean putIfAbsent(X x, Y y, Z z) {
-        synchronized (data) {
+        synchronized (putIfAbsentLock) {
             // 在锁内重新检查 / Re-check under lock
             if (data.stream().anyMatch(entry ->
                     Objects.equals(entry.getX(), x) &&

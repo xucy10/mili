@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 18:40:00 +0800
+Subject: [PATCH] Small optimization to LinearPalette
+
+Folia compatibility: Uses volatile and synchronized for thread safety.
+
+diff --git a/net/minecraft/world/level/chunk/LinearPalette.java b/net/minecraft/world/level/chunk/LinearPalette.java
+index c93302f2457c71caae6f56c59d3a66357a0a6cd6..d37624464962f534ea6fe8672ad2157a40d2111c 100644
+--- a/net/minecraft/world/level/chunk/LinearPalette.java
++++ b/net/minecraft/world/level/chunk/LinearPalette.java
+@@ -10,7 +10,7 @@ import org.apache.commons.lang3.Validate;
+ public class LinearPalette<T> implements Palette<T>, ca.spottedleaf.moonrise.patches.fast_palette.FastPalette<T> { // Paper - optimise palette reads
+     private final T[] values;
+     private final int bits;
+-    private int size;
++    private volatile int size; // Mili - Small optimization to LinearPalette (Folia compatible)
+ 
+     // Paper start - optimise palette reads
+     @Override
+@@ -43,11 +43,16 @@ public class LinearPalette<T> implements Palette<T>, ca.spottedleaf.moonrise.pat
+ 
+     @Override
+     public int idFor(T state, PaletteResize<T> resizeHandler) {
+-        for (int i = 0; i < this.size; i++) {
+-            if (this.values[i] == state) {
++        // Mili start - Small optimization to LinearPalette
++        final T[] values = this.values;
++        final int currentSize = this.size;
++
++        for (int i = 0; i < currentSize; i++) {
++            if (values[i] == state) {
+                 return i;
+             }
+         }
++        // Mili end - Small optimization to LinearPalette
+ 
+         int ix = this.size;
+         if (ix < this.values.length) {
+@@ -61,17 +66,23 @@ public class LinearPalette<T> implements Palette<T>, ca.spottedleaf.moonrise.pat
+ 
+     @Override
+     public boolean maybeHas(Predicate<T> filter) {
+-        for (int i = 0; i < this.size; i++) {
+-            if (filter.test(this.values[i])) {
++        // Mili start - Small optimization to LinearPalette
++        final T[] values = this.values;
++        final int currentSize = this.size;
++
++        for (int i = 0; i < currentSize; i++) {
++            T value = values[i];
++            if (value != null && filter.test(value)) {
+                 return true;
+             }
+         }
++        // Mili end - Small optimization to LinearPalette
+ 
+         return false;
+     }
+ 
+     @Override
+-    public T valueFor(int id) {
++    public synchronized T valueFor(int id) { // Mili - Small optimization to LinearPalette (Folia compatible)
+         if (id >= 0 && id < this.size) {
+             return this.values[id];
+         } else {

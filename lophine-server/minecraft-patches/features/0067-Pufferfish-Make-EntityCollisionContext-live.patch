@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mili Dev <dev@mili.local>
+Date: Sat, 13 Jun 2026 18:00:00 +0800
+Subject: [PATCH] Pufferfish: Make EntityCollisionContext a live representation
+
+This patch is based on the following patch:
+"Make EntityCollisionContext a live representation"
+By: Paul Sauve <paul@technove.co>
+As part of: Airplane (https://github.com/TECHNOVE/Airplane)
+Licensed under: GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html)
+
+diff --git a/net/minecraft/world/phys/shapes/EntityCollisionContext.java b/net/minecraft/world/phys/shapes/EntityCollisionContext.java
+index 98787a3e5366c4964db278785fbbd578373be991..0a0f2b451ed2a82a699df0b0273945cfffaae295 100644
+--- a/net/minecraft/world/phys/shapes/EntityCollisionContext.java
++++ b/net/minecraft/world/phys/shapes/EntityCollisionContext.java
+@@ -12,39 +12,34 @@ import net.minecraft.world.level.material.FluidState;
+ import org.jspecify.annotations.Nullable;
+ 
+ public class EntityCollisionContext implements CollisionContext {
+-    private final boolean descending;
+-    private final double entityBottom;
++    // Mili start - Pufferfish: Make EntityCollisionContext a live representation
+     private final boolean placement;
+-    private final ItemStack heldItem;
+     private final boolean alwaysCollideWithFluid;
++    // Mili end - Pufferfish: Make EntityCollisionContext a live representation
+     private final @Nullable Entity entity;
+ 
+     protected EntityCollisionContext(
+         boolean descending, boolean placement, double entityBottom, ItemStack heldItem, boolean alwaysCollideWithFluid, @Nullable Entity entity
+     ) {
+-        this.descending = descending;
++        // Mili start - Pufferfish: Make EntityCollisionContext a live representation
+         this.placement = placement;
+-        this.entityBottom = entityBottom;
+-        this.heldItem = heldItem;
+         this.alwaysCollideWithFluid = alwaysCollideWithFluid;
++        // Mili end - Pufferfish: Make EntityCollisionContext a live representation
+         this.entity = entity;
+     }
+ 
+     @Deprecated
+     protected EntityCollisionContext(Entity entity, boolean alwaysCollideWithFluid, boolean placement) {
+-        this(
+-            entity.isDescending(),
+-            placement,
+-            entity.getY(),
+-            entity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem() : ItemStack.EMPTY,
+-            alwaysCollideWithFluid,
+-            entity
+-        );
++        // Mili start - Pufferfish: Make EntityCollisionContext a live representation
++        this.placement = placement;
++        this.alwaysCollideWithFluid = alwaysCollideWithFluid;
++        this.entity = entity;
++        // Mili end - Pufferfish: Make EntityCollisionContext a live representation
+     }
+ 
+     @Override
+     public boolean isHoldingItem(Item item) {
+-        return this.heldItem.is(item);
++        return this.entity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem().is(item) : ItemStack.EMPTY.is(item); // Mili - Pufferfish: Make EntityCollisionContext a live representation
+     }
+ 
+     @Override
+@@ -64,12 +59,12 @@ public class EntityCollisionContext implements CollisionContext {
+ 
+     @Override
+     public boolean isDescending() {
+-        return this.descending;
++        return this.entity != null && this.entity.isDescending(); // Mili - Pufferfish: Make EntityCollisionContext a live representation
+     }
+ 
+     @Override
+     public boolean isAbove(VoxelShape shape, BlockPos pos, boolean canAscend) {
+-        return this.entityBottom > pos.getY() + shape.max(Direction.Axis.Y) - 1.0E-5F;
++        return (this.entity == null ? -Double.MAX_VALUE : entity.getY()) > (double) pos.getY() + shape.max(Direction.Axis.Y) - (double) 1.0E-5F; // Mili - Pufferfish: Make EntityCollisionContext a live representation
+     }
+ 
+     public @Nullable Entity getEntity() {
