@@ -150,23 +150,11 @@ public class OptimizedConcurrentTable<X, Y, Z> extends ConcurrentTable<X, Y, Z> 
 
     @Override
     public List<Y> getY(X x, Z z) {
-        ConcurrentHashMap<Z, Set<X>> innerMap = zxIndex.get(z);
+        // zxIndex: Z -> X -> {Y}，直接用 z 和 x 查询 / zxIndex: Z -> X -> {Y}, direct lookup by z then x
+        ConcurrentHashMap<X, Set<Y>> innerMap = zxIndex.get(z);
         if (innerMap == null) return new ArrayList<>();
-        Set<X> resultX = innerMap.get(x);
-        if (resultX == null) return new ArrayList<>();
-        // 需要从 X 反查 Y / Need to reverse-lookup Y from X
-        List<Y> result = new ArrayList<>();
-        for (X xVal : resultX) {
-            ConcurrentHashMap<Y, Set<Z>> xyInner = xyIndex.get(xVal);
-            if (xyInner != null) {
-                for (Map.Entry<Y, Set<Z>> entry : xyInner.entrySet()) {
-                    if (entry.getValue().contains(z)) {
-                        result.add(entry.getKey());
-                    }
-                }
-            }
-        }
-        return result;
+        Set<Y> result = innerMap.get(x);
+        return result != null ? new ArrayList<>(result) : new ArrayList<>();
     }
 
     public List<X> getX(Y y, Z z) {
