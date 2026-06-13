@@ -10,10 +10,10 @@ As part of: Lithium (https://github.com/CaffeineMC/lithium)
 Licensed under: LGPL-3.0 (https://www.gnu.org/licenses/lgpl-3.0.html)
 
 diff --git a/net/minecraft/world/level/chunk/LevelChunk.java b/net/minecraft/world/level/chunk/LevelChunk.java
-index 0000000..0000000 100644
+index a1035c3338bf5a7f1e82021b808eb143ad6a3085..d72a03887f91e6e824b0882bfbba8a6a1ea6bc46 100644
 --- a/net/minecraft/world/level/chunk/LevelChunk.java
 +++ b/net/minecraft/world/level/chunk/LevelChunk.java
-@@ -380,20 +380,23 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+@@ -387,10 +387,13 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
                  return null;
              } else {
                  Block block = state.getBlock();
@@ -26,14 +26,13 @@ index 0000000..0000000 100644
 +                Heightmap heightmap1 = this.heightmaps.get(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES);
 +                Heightmap heightmap2 = this.heightmaps.get(Heightmap.Types.OCEAN_FLOOR);
 +                Heightmap heightmap3 = this.heightmaps.get(Heightmap.Types.WORLD_SURFACE);
-+                org.leavesmc.leaves.lithium.common.world.chunk.heightmap.CombinedHeightmapUpdate.updateHeightmaps(
-+                    heightmap0, heightmap1, heightmap2, heightmap3, this, i, y, i2, state);
++                org.leavesmc.leaves.lithium.common.world.chunk.heightmap.CombinedHeightmapUpdate.updateHeightmaps(heightmap0, heightmap1, heightmap2, heightmap3, this, i, y, i2, state);
 +                // Mili end - lithium: combined_heightmap_update
                  boolean hasOnlyAir1 = section.hasOnlyAir();
                  if (hasOnlyAir != hasOnlyAir1) {
                      this.level.getChunkSource().getLightEngine().updateSectionStatus(pos, hasOnlyAir1);
 diff --git a/net/minecraft/world/level/levelgen/Heightmap.java b/net/minecraft/world/level/levelgen/Heightmap.java
-index 0000000..0000000 100644
+index b53853c2b8ec79a4dcdf66f7995540e59ddee356..e30f24788adc8160739a714e3519acb0ae7ee3b5 100644
 --- a/net/minecraft/world/level/levelgen/Heightmap.java
 +++ b/net/minecraft/world/level/levelgen/Heightmap.java
 @@ -123,6 +123,12 @@ public class Heightmap {
